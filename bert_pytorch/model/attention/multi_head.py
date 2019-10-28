@@ -11,7 +11,7 @@ class MultiHeadedAttention(nn.Module):
         super().__init__()
         assert d_model % h == 0
 
-        # We assume d_v always equals d_k
+        # We assume d_v always equals d_k. h is the number of heads
         self.d_k = d_model // h
         self.h = h
 
@@ -25,6 +25,7 @@ class MultiHeadedAttention(nn.Module):
         batch_size = query.size(0)
 
         # 1) Do all the linear projections in batch from d_model => h x d_k
+        # Check out attention is all you need figure 2
         query, key, value = [l(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
                              for l, x in zip(self.linear_layers, (query, key, value))]
 
@@ -32,6 +33,7 @@ class MultiHeadedAttention(nn.Module):
         x, attn = self.attention(query, key, value, mask=mask, dropout=self.dropout)
 
         # 3) "Concat" using a view and apply a final linear.
+        # contiguous doesn't affect your target tensor at all, it just makes sure that it is stored in a contiguous chunk of memory.
         x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
 
         return self.output_linear(x)
